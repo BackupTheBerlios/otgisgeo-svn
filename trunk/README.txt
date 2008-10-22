@@ -24,7 +24,11 @@ Checkout from SVN repository in a new TTCN-3 project the following:
 build.xml    ant script for building the Java sources and creating a JavaDoc
 README.txt   installation instructions
 
-3. Necessary aditional libraries and configuration
+In class qualipso.openttcn.gistest.tri.TriCommunicationSA edit (if necessary) the URLs for GISClient and GEOServer:
+private final String GEOSERVER_URL = "http://150.254.173.202:8090/geoserver/wfs";
+private final String GISCLIENT_URL = "http://syros.eurodyn.com:18088/GISClient3/";
+
+3. Necessary additional libraries and configuration
 In the root directory create a folder called lib and add the following files (making ):
 httpunit.jar
 dom4j-1.6.1.jar
@@ -42,7 +46,7 @@ In the build.xml file update the "otSDK" property to the folder in the OpenTTCN 
 <property name="otSDK" value="C:\OpenTTCN\JavaSDK\lib"/> 
 
 To build the Java sources run the 'all' target.
-If the build is sucessfull a adapter.jar file must be created in the folder containing all the other classes. 
+If the build is successful a adapter.jar file must be created in the folder containing all the other classes. 
 
 4. Starting the Adapter
 To start the Adapter create a batch file that contains the following script (don't forger to update the path variables):
