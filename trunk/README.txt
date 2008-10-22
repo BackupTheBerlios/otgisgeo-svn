@@ -4,6 +4,7 @@ TOC
 3. Necessary aditional libraries and configuration
 4. Starting the Adapter
 5. Configure the build.xml
+6. Executing the tests
 
 1. Prerequisites
 a. Windows XP or "better"
@@ -74,4 +75,19 @@ The address of the package lists is set in the following parameters. If the pack
 <property name="java.packageList.offline" value="false"/>
 <property name="java.packageList.location" value="http://java.sun.com/j2se/1.5.0/docs/api/package-list"/> 
 
+6. Executing the tests
+To run the control part of the TTCN-3 abstract test cases the following steps must be taken:
+a. Open a DOS command window
+b. Start the OpenTTCN Test Server
+>ot start
 
+c. Create a test session called my_test_session
+>session create my_test_session
+
+d. Navigate to the /ttcn3 that has the *.ttcn3 files and type the following command to load the TTCN-3 test cases to the test session.
+>importer3 load my_test_session  GeoServerMain.ttcn3 GISClientRequestTemplates.ttcn3
+
+e. Open a NEW command window and start the script described in section 4.
+
+f. To run the control part of the TTCN-3 main module type the following command:
+>tester run my_test_session @control 
