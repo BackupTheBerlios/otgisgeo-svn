@@ -1,0 +1,475 @@
+module GeoServerMain language "TTCN-3:2005" {
+	import from GISClientRequestTemplates all;
+	
+	type port SUTInterfacePort message {
+		out all;
+		in all;	
+	}
+	
+	type record address	{
+	    charstring host
+	} 
+	
+	type component SUTInterfaceComponent {
+		port SUTInterfacePort sutPort;
+		timer sutTimer := 15.0;
+		var address sut_address := {
+			host := "sutHost"
+		}			
+	}
+		
+	type component TSIcomponent  {
+		port SUTInterfacePort tsiPort;
+	}	
+	//used as the city to be returned from the function when an error happens
+	template CityType defaultCity :=  {
+		requestType := "",
+		cityName := "",
+		latitude := "0.0",
+		longitude := "0.0",
+		adminName := "",
+		countryName := "",
+		status := "",
+		popClass := ""
+	}
+	
+	/* Insert the city using the GISClient interface. 
+	 * Returns 'SUCCESS' if the insert was successfull or 'ERROR' otherwise.
+	 */
+	function insertCityUsingGISClient(CityType inCity) runs on SUTInterfaceComponent return charstring {
+		template charstring replyFromServer := ?;
+		var charstring result;
+		inCity.requestType := "addCityGIS";
+		sutPort.send(inCity) to sut_address;
+		sutTimer.start;
+		alt {
+			[] sutPort.receive(replyFromServer) from sut_address -> value result {				
+				sutTimer.stop;
+			}
+			[] sutPort.receive from sut_address {
+				result := "ERROR";
+				sutTimer.stop;
+			} 
+			[] sutTimer.timeout {
+				result := "ERROR";
+			}			
+		}
+		return result;		
+	}
+	/* Insert the city directly to the GEOServer using the WFS
+	*  Returns 'SUCCESS' if the insert was successfull or 'ERROR' otherwise.
+	*/
+	function insertCityAtGEOServer(CityType city) runs on SUTInterfaceComponent return charstring {
+		template charstring replyFromServer := ?;
+		var charstring result := "";
+		city.requestType := "addCityGEO";
+		sutPort.send(city) to sut_address;
+		sutTimer.start;
+		alt {
+			[] sutPort.receive(replyFromServer) from sut_address -> value result {				
+				sutTimer.stop;
+			}
+			[] sutPort.receive from sut_address {
+				result := "ERROR";
+				sutTimer.stop;
+			} 
+			[] sutTimer.timeout {
+				result := "ERROR";
+			}			
+		}
+		return result;
+	}
+
+	/* Replace the details of oldCity with those of newCity
+	*  Returns 'SUCCESS' if the insert was successfull or 'ERROR' otherwise.
+	*/
+	function updateCityUsingGISClient(CityType ancCity, CityType novCity) runs on SUTInterfaceComponent return charstring  {
+		// fetch old city
+		template charstring replyFromServer := ?;
+		var CityType oldCity := valueof(ancCity);
+		var CityType newCity := valueof(novCity);
+		var charstring result := "";
+		var UpdateCity updateDetails := {
+			requestType := "updateCity",
+			oldCityName := oldCity.cityName,
+			oldLatitude :=oldCity.latitude,
+			oldLongitude := oldCity.longitude,
+			oldAdminName := oldCity.adminName,
+			oldCountryName := oldCity.countryName,
+			oldStatus := oldCity.status,
+			oldPopClass := oldCity.popClass,
+			newCityName := newCity.cityName,
+			newLatitude := newCity.latitude,
+			newLongitude := newCity.longitude,
+			newAdminName := newCity.adminName,
+			newCountryName := newCity.countryName,
+			newStatus := newCity.status,
+			newPopClass := newCity.popClass
+		}
+		sutPort.send(updateDetails) to sut_address;
+		sutTimer.start;
+		alt {
+			[] sutPort.receive(replyFromServer) from sut_address -> value result {				
+				sutTimer.stop;
+			}
+			[] sutPort.receive from sut_address {
+				result := "ERROR";
+				sutTimer.stop;
+			} 
+			[] sutTimer.timeout {
+				result := "ERROR";
+			}			
+		}
+		return result;		
+	}
+	
+	/* Delete the city using the GISClient interface
+	*  Returns 'SUCCESS' if the insert was successfull or 'ERROR' otherwise.
+	*/
+	function deleteCityUsingGISClient(CityType city) runs on SUTInterfaceComponent return charstring  {
+		template charstring replyFromServer := ?;
+		var charstring result := "";
+		city.requestType := "deleteGIS";
+		sutPort.send(city) to sut_address;
+		sutTimer.start;
+		alt {
+			[] sutPort.receive(replyFromServer) from sut_address -> value result {				
+				sutTimer.stop;
+			}
+			[] sutPort.receive from sut_address {
+				result := "ERROR";
+				sutTimer.stop;
+			} 
+			[] sutTimer.timeout {
+				result := "ERROR";
+			}			
+		}
+		return result;			
+	}
+	
+	/* Delete the city using the WFS at GEOServer
+	*  Returns 'SUCCESS' if the insert was successfull or 'ERROR' otherwise.
+	*/
+	function deleteCityAtGEOServer(CityType city) runs on SUTInterfaceComponent return charstring  {
+		template charstring replyFromServer := ?;
+		var charstring result := "";
+		city.requestType := "deleteGEO";
+		sutPort.send(city) to sut_address;
+		sutTimer.start;
+		alt {
+			[] sutPort.receive(replyFromServer) from sut_address -> value result {				
+				sutTimer.stop;
+			}
+			[] sutPort.receive from sut_address {
+				result := "ERROR";
+				sutTimer.stop;
+			} 
+			[] sutTimer.timeout {
+				result := "ERROR";
+			}			
+		}
+		return result;		
+		
+	}
+	
+	/* Ask the GEOServer whether this city exists
+	   Returns the city retrieved.
+	*/
+	function retrieveCityFromGEOServer(CityType city) runs on SUTInterfaceComponent return CityType {
+		log("Inside function retrieveCityFromGEOServer");
+		city.requestType := "retrieveCity";
+		template charstring anyChar:= ?;	
+		template CityType someCity :=?;	
+		var charstring msg := "";	
+
+		var CityType result;
+		log("Sending the request to GEOServer");
+		sutPort.send(city) to sut_address;
+		sutTimer.start;
+		alt {
+			[] sutPort.receive(someCity) from sut_address -> value result {			
+				log("Received a city.");	
+				sutTimer.stop;
+				return valueof(result);	
+			}
+			[] sutPort.receive(anyChar) from sut_address -> value msg  {
+				log("Received a message:" & msg);
+				sutTimer.stop;
+				return valueof(defaultCity);
+			} 
+			[] sutPort.receive from sut_address {
+				log("Received unexpected response. Returning default city." );
+				sutTimer.stop;
+				return valueof(defaultCity);
+			} 
+			[] sutTimer.timeout {
+				log("Timer timeout. Returning default city.");
+				return valueof(defaultCity);
+			}			
+		}
+		log("None of the altstep executed. Returning default city.");
+		return valueof(defaultCity);
+	}
+	
+	function retrieveCityFromGISClient(CityType city) runs on SUTInterfaceComponent return CityType {
+		city.requestType := "retrieveCityGIS";
+		template charstring anyChar:= ?;
+		var charstring msg := "";
+		template CityType someCity := ?;
+		var CityType result;
+		sutPort.send(city) to sut_address;
+		sutTimer.start;
+		alt {
+			[] sutPort.receive(someCity) from sut_address -> value result {				
+				sutTimer.stop;
+			}
+			[] sutPort.receive(anyChar) from sut_address -> value msg {
+				sutTimer.stop;
+			} 
+			[] sutPort.receive from sut_address {
+				sutTimer.stop;
+			} 
+			[] sutTimer.timeout {
+			}			
+		}
+		if (msg == "") {
+			return result;
+		} else {
+			log("Could not find city");
+			return valueof(defaultCity);			
+		}
+		return result;		
+	}
+	
+	/* To test the insert  of the GISClient:
+	   1. Attempt to retrieve the city to verify it does not already exist
+	   2. Insert the city using the GISClient
+	   3. Retrieve the city directly from GEOServer
+	   4. Delete the city directly at GEOServer so that the server will be in the same condition		 
+	*/ 
+	testcase insertCity(CityType cityToInsert) runs on SUTInterfaceComponent system TSIcomponent {		
+		log("Mapping ports...");
+		map(mtc:sutPort, system:tsiPort);
+		log("Looking up city in GEOServer to verify it does not already exist.");
+		var CityType retrieved := retrieveCityFromGEOServer(valueof(cityToInsert));
+		log("Got a response. Check if the city is matching with the default city.");
+		log(retrieved);
+		var boolean matchesWithDefault := match(retrieved, defaultCity);
+		if (matchesWithDefault) {
+			log("City does not previously exist");	
+			var charstring insertResult := insertCityUsingGISClient(valueof(cityToInsert));
+			if (insertResult == "SUCCESS") {
+				log("GISClient reported succesfull insertion.");
+			} else {
+				log("GISClient reported error during insertion.");
+			}			
+			var CityType verifyCity := retrieveCityFromGEOServer(valueof(cityToInsert));
+			log("Retrieved:");
+			log(verifyCity);
+			log("Inserted:");
+			log(cityToInsert);
+			var boolean cityNameMatches := match(verifyCity.cityName, cityToInsert.cityName);
+			var boolean countryNameMatches := match(verifyCity.countryName, cityToInsert.countryName);
+			var boolean adminNameMatches := match(verifyCity.adminName, cityToInsert.adminName);
+			
+			if (cityNameMatches and countryNameMatches and adminNameMatches) {
+				log("The city was successfully inserted.");
+				setverdict(pass);
+				var charstring deleteResponse := deleteCityAtGEOServer(valueof(cityToInsert));
+				if (deleteResponse == "SUCCESS") {
+					log("City deleted in order to restore the system to its initial condition.");
+				} else {
+					log("Could not delete city.");
+				}				
+			} else {
+				log("Error: The city was not inserted.");
+				setverdict(fail);	
+			}	
+		} else {
+			log("Error. The city already exists! Please delete it!");
+			setverdict(inconc);
+		}
+		unmap(mtc:sutPort, system:tsiPort);
+	}
+	
+	/*
+		Test the update functionality of a city
+	    1. Insert a city directly at the GEOServer
+	    2. Update some of it's details
+	 	3. Retrieve the updated city
+	 	4. Delete the city to restore the server in the previous state
+	 */
+	testcase updateCity(CityType initialCity, CityType updatedCity) runs on SUTInterfaceComponent system TSIcomponent {
+		log("Mapping ports...");
+		map(mtc:sutPort, system:tsiPort);
+		log("Inserting a new city directly at GEOServer.");
+		var charstring insertCityResult :=  insertCityAtGEOServer(valueof(initialCity));
+		if (insertCityResult == "SUCCESS") {
+			log("Initial city inserted. Updating city details...");
+			var charstring updateResult := updateCityUsingGISClient(valueof(initialCity), valueof(updatedCity));	
+			if (updateResult == "SUCCESS") {
+				log("GISClient reported city update OK.");
+				var CityType returnedCity := retrieveCityFromGEOServer(valueof(updatedCity));
+				returnedCity.requestType := "";
+				
+				var boolean cityNameMatch := match(returnedCity.cityName, updatedCity.cityName);
+				var boolean countryNameMatch := match(returnedCity.countryName, updatedCity.countryName);
+				var boolean adminNameMatch := match(returnedCity.adminName, updatedCity.adminName);
+				if (cityNameMatch and countryNameMatch and adminNameMatch) {
+					log("The updated city was retrieved from GEOServer.");
+					setverdict(pass);
+					var charstring deleteResponse := deleteCityAtGEOServer(valueof(updatedCity));
+					if (deleteResponse == "SUCCESS") {
+						log("City deleted in order to restore the system to its initial condition.");
+					} else {
+						log("Could not delete city.");
+					}				
+				} else {
+					log("The updated city could not be retrieved.");
+					setverdict(fail);
+					var charstring deleteResponse := deleteCityAtGEOServer(valueof(initialCity));
+					if (deleteResponse == "SUCCESS") {
+						log("City deleted in order to restore the system to its initial condition.");
+					} else {
+						log("Could not delete city.");
+					}	
+				}				
+			} else {
+				log("GISClient reported error during city update.");
+				setverdict(fail);
+				var charstring deleteResponse := deleteCityAtGEOServer(valueof(initialCity));
+				if (deleteResponse == "SUCCESS") {
+					log("City deleted in order to restore the system to its initial condition.");
+				} else {
+					log("Could not delete city.");
+				}	
+			}
+		} else {
+			log("Error. Could not enter the initial city.");
+			setverdict(inconc);
+		}
+		unmap(mtc:sutPort, system:tsiPort);	
+	}
+	/*
+		Test deleting a city.
+		1, Insert a new city directly at GEOServer
+		2. Delete it using GISClient
+		3. Attempt to retrieve it from GEOServer
+		     If it still exists then the test fails, otherwise it's successful.		
+	 */
+	testcase deleteCity(CityType aCity) runs on SUTInterfaceComponent system TSIcomponent {
+		log("Mapping ports...");
+		map(mtc:sutPort, system:tsiPort);
+		log("Inserting a new city directly at GEOServer.");
+		var charstring insertCityResult :=  insertCityAtGEOServer(valueof(aCity));
+		if (insertCityResult == "SUCCESS") {
+			log("City succesfully inserted at GEOServer");
+			var charstring deleteCityResult := deleteCityUsingGISClient(valueof(aCity));
+			if (deleteCityResult == "SUCCESS") {
+				log("GISClient reported succeful deletion of city. Attempting to retrieve it from GEOServer");
+				var CityType retrieved := retrieveCityFromGEOServer(valueof(aCity));
+				retrieved.requestType := "";
+				var boolean matchesWithDefault := match(retrieved, defaultCity);
+				if (matchesWithDefault) {
+					log("City successfully deleted from GEOServer");
+					setverdict(pass);
+				} else {
+					log("Error. The city was not deleted!");
+					setverdict(fail);
+				}
+			} else {
+				log("GISClient reported an error while deleting the city.");
+				setverdict(fail);
+			}
+		} else {
+			log("Could not insert city at GEOServer.");
+			setverdict(inconc);
+		}
+		map(mtc:sutPort, system:tsiPort);
+	}
+	/* Test if the interface displays an city correctly 
+	   1. Insert a city directly at the GEOServer
+	   2. Retrieve the city from the GISClient interface
+	   3. If successful delete the city to restore the server to the initial state	   
+	*/
+	testcase retrieveCity(CityType aCity) runs on SUTInterfaceComponent system TSIcomponent {
+		map(mtc:sutPort, system:tsiPort);
+		log("Inserting a new city directly at GEOServer.");
+		var charstring insertCityResult :=  insertCityAtGEOServer(valueof(aCity));
+		if (insertCityResult == "SUCCESS") {
+			log("City inserted at GEOServer.");			
+			var CityType returnedCity := retrieveCityFromGISClient(valueof(aCity));
+			returnedCity.requestType := "";
+			log("Returned city:");
+			log(returnedCity);
+			log("Initial city");
+			log(aCity);
+			var boolean cityMatch := match(returnedCity, aCity);			
+			if (cityMatch) {
+				log("Match successful");
+				setverdict(pass);
+				var charstring deleteResponse := deleteCityAtGEOServer(valueof(aCity));
+				if (deleteResponse == "SUCCESS") {
+					log("City deleted in order to restore the system to its initial condition.");
+				} else {
+					log("Could not delete city.");
+				}		
+			} else {
+				log("The retrieved country does not match.");
+				setverdict(fail);
+			}
+		} else {
+			log("Error. Cannot insert city in GEOServer");
+		}
+		unmap(mtc:sutPort, system:tsiPort);	
+	}
+	control {
+		template CityType cityWithCorrectData :=  {
+			requestType := "",
+			cityName := "Glenorchy",
+			latitude := "-41.3",
+			longitude := "141.2",
+			adminName := "Tasmania",
+			countryName := "Tasmania",
+			status := "status",
+			popClass := "popClass"
+		}
+		
+		template CityType cityWithErroneousData :=  {
+			requestType := "",
+			cityName := "",
+			latitude := "",
+			longitude := "",
+			adminName := "Tasmania",
+			countryName := "Tasmania",
+			status := "status",
+			popClass := "popClass"
+		}		
+		template CityType updatedCityWithCorrectData :=  {
+			requestType := "",
+			cityName := "Glenorchy",
+			latitude := "-45.3",
+			longitude := "140.0",
+			adminName := "Tasmania",
+			countryName := "Australia",
+			status := "status",
+			popClass := "popClass"
+		}		
+		log("Execute 'Create City' with correct data");
+		execute(insertCity(valueof(cityWithCorrectData)));
+		log("Execute 'Create City' with correct data");
+		execute(insertCity(valueof(cityWithErroneousData)));
+		log("Execute 'Retrieve City' with correct data");
+		execute(retrieveCity(valueof(cityWithCorrectData)));
+		log("Execute 'Create City' with erroneous data");
+		execute(retrieveCity(valueof(cityWithErroneousData)));
+		log("Execute 'Update City' with correct data");
+		execute(updateCity(valueof(cityWithCorrectData), valueof(updatedCityWithCorrectData)));
+		log("Execute 'Update City' with erroneous data");
+		execute(updateCity(valueof(cityWithCorrectData), valueof(cityWithErroneousData)));
+		log("Execute 'Delete City' with correct data");
+		execute(deleteCity(valueof(cityWithCorrectData)));
+		log("Execute 'Delete City' with erroneous data");
+		execute(deleteCity(valueof(cityWithErroneousData)));		
+	}	
+}
