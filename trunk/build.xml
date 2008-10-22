@@ -1,0 +1,80 @@
+<project name="OpenTTCN GIS/GEO" default="all">
+    <!-- adapt to your environment -->
+    <target name="init">
+        <tstamp/>
+    	<!-- temporary folder for build artifacts -->
+        <property name="build" location="."/>
+        <!-- Java source folder -->
+        <property name="src" location="javasrc"/>
+        <!-- temporary folder for compiled classes -->
+        <property name="classes" location="classes"/>
+    	<!-- delete existing classes -->
+    	<delete dir="${classes}"/>
+        <!-- libraries folder -->
+        <property name="lib" value="lib"/>
+    	<mkdir dir="${classes}"/>    
+    	<!-- library folder for the OpenTTCN Java SDK -->
+    	<property name="otSDK" value="C:\OpenTTCN\JavaSDK\lib"/> 
+    	<!-- test adapter file to be created -->
+    	<property name="adapter" location="${lib}/adapter.jar"/>
+    	<!-- folder for JavaDoc -->
+    	<property name="javadoc.outdir" location="javadoc"/>
+    	<!-- use proxy for creating JavaDoc? -->
+    	<property name="proxy.use" value="true"/>
+    	<!-- proxy properties -->
+    	<property name="proxy.host" value="squid.eurodyn.com"/>
+    	<property name="proxy.port" value="8080"/>
+    	<!-- Is Java package list available offline? where is it? -->
+    	<property name="java.packageList.offline" value="false"/>
+    	<property name="java.packageList.location" value="http://java.sun.com/j2se/1.5.0/docs/api/package-list"/>
+    	<!-- Is HttpUnit package list available online? where is it? -->
+    	<property name="httpunit.packageList.offline" value="false"/>
+    	<property name="httpunit.packageList.location" value="http://httpunit.sourceforge.net/doc/api/package-list"/>
+    	<!-- Is dom4j package list available online? where is it? -->
+    	<property name="dom4j.packageList.offline" value="false"/> 
+    	<property name="dom4j.packageList.location" value="http://www.dom4j.org/dom4j-1.6.1/apidocs/package-list"/>	
+    </target>
+	<target name="all" depends="init, compile, createAdapterJar, doc"/>	 
+    <!-- Compile classes -->
+    <target name="compile" depends="init">
+        <echo>Compile ${ant.project.name} Test Adapter and Codec</echo>
+	    <javac srcdir="${src}" destdir="${classes}">
+            <classpath>
+            	<pathelement location="${otSDK}/OTSDK.jar"/> 
+            	<pathelement location="${lib}/httpunit.jar"/>            	
+            	<pathelement location="${lib}/dom4j-1.6.1.jar"/>            	
+            </classpath>
+        </javac>
+    </target>
+    <!-- Make the Adapter/Codec jar --> 
+    <target name="createAdapterJar" depends="init,compile">
+        <echo>Create Test Adapter jar file</echo>
+        <jar jarfile="${adapter}" basedir="${classes}" includes="**/*.class"/>
+    </target>
+	<!-- Create JavaDoc documentation -->
+	<target name="doc" depends="init">
+	   <echo>Creating Javadoc from ${classes} to ${javadoc.outdir}</echo>
+	   <mkdir dir="${javadoc.outdir}" />
+	   <!-- javadoc.additionalparam.proxy -->
+	   <condition property="javadoc.additionalparam.proxy" value="-J-DproxySet=${proxy.use} -J-DproxyHost=${proxy.host} -J-DproxyPort=${proxy.port}">
+	     <equals arg1="${proxy.use}" arg2="true" />
+	   </condition>
+	   <condition property="javadoc.additionalparam.proxy" value="">
+	     <not>
+	       <isset property="javadoc.additionalparam.proxy" />
+	     </not>
+	   </condition>
+	   <echo>using additionalparam.proxy: ${javadoc.additionalparam.proxy}</echo>
+	   
+		<!--Create Javadoc-->
+	   <javadoc sourcepath="${src}" classpath="${classes}" packagenames="qualipso.*" destdir="${javadoc.outdir}" version="true" author="true" windowtitle="OpenTTCN Adapter and CODEC for GISClient-GEOServer Testbed" additionalparam="-J-Xmx32m ${javadoc.additionalparam.proxy}">
+	     <doctitle>OpenTTCN Adapter and CODEC for GISClient-GEOServer Testbed</doctitle>
+	     <bottom>Copyright &#169; 2004 EU DG Translation. All Rights Reserved.</bottom>
+	     <tag name="todo" scope="all" description="To do:" />
+	     <!-- links -->	     
+	     <link offline="${java.packageList.offline}" href="http://java.sun.com/j2se/1.5.0/docs/api/" packagelistLoc="${java.packageList.location}" />
+	     <link offline="${httpunit.packageList.offline}" href="http://httpunit.sourceforge.net/doc/api/" packagelistLoc="${httpunit.packageList.location}" />
+	     <link offline="${dom4j.packageList.offline}" href="http://www.dom4j.org/dom4j-1.6.1/apidocs/" packagelistLoc="${dom4j.packageList.location}" />
+	   </javadoc>
+	 </target> 
+</project>
