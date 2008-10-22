@@ -30,17 +30,19 @@ private final String GISCLIENT_URL = "http://syros.eurodyn.com:18088/GISClient3/
 
 3. Necessary additional libraries and configuration
 In the root directory create a folder called lib and add the following files (making ):
-httpunit.jar
-dom4j-1.6.1.jar
-xercesImpl-2.6.1.jar
-xmlParserAPIs-2.6.1.jar
-activation-1.1.jar
-js-1.6R5.jar;
-jtidy-4aug2000r7-dev.jar
-junit-3.8.1.jar
-mail-1.4.jar
-servlet-api-2.4.jar
-jaxen-1.1.1.jar
+From HttpUnit libraries:
+  httpunit.jar
+  xercesImpl-2.6.1.jar
+  xmlParserAPIs-2.6.1.jar
+  activation-1.1.jar
+  js-1.6R5.jar;
+  jtidy-4aug2000r7-dev.jar
+  junit-3.8.1.jar
+  mail-1.4.jar
+  servlet-api-2.4.jar
+From dom4j libraries:
+  dom4j-1.6.1.jar
+  jaxen-1.1-beta-6.jar
 
 In the build.xml file update the "otSDK" property to the folder in the OpenTTCN tester installation that contains the OTSDK.jar
 <property name="otSDK" value="C:\OpenTTCN\JavaSDK\lib"/> 
