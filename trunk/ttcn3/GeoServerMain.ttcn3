@@ -292,6 +292,35 @@ module GeoServerMain language "TTCN-3:2005" {
 		unmap(mtc:sutPort, system:tsiPort);
 	}
 	
+	/* To test the insert  of the GISClient:
+	   1. Attempt to insert a City with erroneous parameters
+	   2. Try to retrieve it from GEOServer. If the City is found the test has failed
+		 
+	*/ 
+	testcase insertCity2(CityType cityToInsert) runs on SUTInterfaceComponent system TSIcomponent {		
+		log("Mapping ports...");
+		map(mtc:sutPort, system:tsiPort);
+		var charstring insertResult := insertCityUsingGISClient(valueof(cityToInsert));
+		if (insertResult == "ERROR") {
+			log("GISClient reported succesfull insertion.");
+			var CityType verifyCity := retrieveCityFromGEOServer(valueof(cityToInsert));
+			var boolean cityNameMatches := match(verifyCity.cityName, cityToInsert.cityName);
+			var boolean countryNameMatches := match(verifyCity.countryName, cityToInsert.countryName);
+			var boolean adminNameMatches := match(verifyCity.adminName, cityToInsert.adminName);
+			if (cityNameMatches and countryNameMatches and adminNameMatches) {
+				log("The city was inserted.");
+				setverdict(fail);		
+			} else {
+				log("The city was not inserted.");
+				setverdict(pass);	
+			}			
+		} else {
+			log("GISClient reported succesful insertion.");
+			setverdict(fail);
+		}			
+		unmap(mtc:sutPort, system:tsiPort);
+	}
+	
 	/*
 		Test the update functionality of a city
 	    1. Insert a city directly at the GEOServer
@@ -351,6 +380,41 @@ module GeoServerMain language "TTCN-3:2005" {
 		unmap(mtc:sutPort, system:tsiPort);	
 	}
 	/*
+		Test the update functionality of a city
+	    1. Insert a city directly at the GEOServer
+	    2. Update some of it's details
+	 	3. Retrieve the updated city
+	 	4. Delete the city to restore the server in the previous state
+	 */
+	testcase updateCity2(CityType initialCity, CityType updatedCity) runs on SUTInterfaceComponent system TSIcomponent {
+		log("Mapping ports...");
+		map(mtc:sutPort, system:tsiPort);
+		log("Inserting a new city directly at GEOServer.");
+		var charstring insertCityResult :=  insertCityAtGEOServer(valueof(initialCity));
+		if (insertCityResult == "SUCCESS") {
+			log("Initial city inserted. Updating city details...");
+			var charstring updateResult := updateCityUsingGISClient(valueof(initialCity), valueof(updatedCity));	
+			if (updateResult == "ERROR") {
+				log("GISClient reported error while updateing with malformed data.");
+				setverdict(pass);
+			} else {
+				log("GISClient reported success while updating with malformed data.");
+				setverdict(fail);
+			}
+			var charstring deleteResponse := deleteCityAtGEOServer(valueof(initialCity));
+			if (deleteResponse == "SUCCESS") {
+				log("City deleted in order to restore the system to its initial condition.");
+			} else {
+				log("Could not delete city.");
+			}	
+		} else {
+			log("Error. Could not enter the initial city.");
+			setverdict(inconc);
+		}
+		unmap(mtc:sutPort, system:tsiPort);	
+	}
+	
+	/*
 		Test deleting a city.
 		1, Insert a new city directly at GEOServer
 		2. Delete it using GISClient
@@ -383,6 +447,36 @@ module GeoServerMain language "TTCN-3:2005" {
 			}
 		} else {
 			log("Could not insert city at GEOServer.");
+			setverdict(inconc);
+		}
+		map(mtc:sutPort, system:tsiPort);
+	}	
+	/*
+		Test deleting a city.
+		1, Insert a new city directly at GEOServer
+		2. Delete it using GISClient
+		3. Attempt to retrieve it from GEOServer
+		     If it still exists then the test fails, otherwise it's successful.		
+	 */
+	testcase deleteCity2(CityType aCity) runs on SUTInterfaceComponent system TSIcomponent {
+		log("Mapping ports...");
+		map(mtc:sutPort, system:tsiPort);
+		log("Attempting to retrieved the city from GEOServer.");
+		var CityType retrieved := retrieveCityFromGEOServer(valueof(aCity));
+		retrieved.requestType := "";
+		var boolean matchesWithDefault := match(retrieved, defaultCity);
+		if (matchesWithDefault) {
+			log("The city does not already exist.");
+			var charstring deleteCityResult := deleteCityUsingGISClient(valueof(aCity));
+			if (deleteCityResult == "SUCCESS") {
+				log("GISClient reported succeful deletion of a non-existing city.");
+				setverdict(fail);
+			} else {
+				log("GISClient could not find the city.");
+				setverdict(pass);
+			}
+		} else {
+			log("The city already existed. Cannot continue testing.");
 			setverdict(inconc);
 		}
 		map(mtc:sutPort, system:tsiPort);
@@ -423,6 +517,39 @@ module GeoServerMain language "TTCN-3:2005" {
 		}
 		unmap(mtc:sutPort, system:tsiPort);	
 	}
+	/* Test if the interface displays an city correctly 
+	   1. Insert a city directly at the GEOServer
+	   2. Retrieve the city from the GISClient interface
+	   3. If successful delete the city to restore the server to the initial state	   
+	*/
+	testcase retrieveCity2(CityType aCity) runs on SUTInterfaceComponent system TSIcomponent {
+		map(mtc:sutPort, system:tsiPort);
+		log("Attempting to retrieve city from GEOServer.");
+		var CityType retrieved := retrieveCityFromGEOServer(valueof(aCity));
+		retrieved.requestType := "";
+		var boolean matches := match(retrieved, aCity);
+		if (not matches) {
+			log("City does not exist in GEOServer.");			
+			var CityType returnedCity := retrieveCityFromGISClient(valueof(aCity));
+			returnedCity.requestType := "";
+			log("Returned city:");
+			log(returnedCity);
+			log("Initial city");
+			log(aCity);
+			var boolean cityMatch := match(returnedCity, aCity);			
+			if (cityMatch) {
+				log("Match successful");
+				setverdict(fail);	
+			} else {
+				log("The retrieved country does not match.");
+				setverdict(pass);
+			}
+		} else {
+			log("The city exists in GEOServer. Cannot continue testing");
+		}
+		unmap(mtc:sutPort, system:tsiPort);	
+	}
+	
 	control {
 		template CityType cityWithCorrectData :=  {
 			requestType := "",
@@ -454,22 +581,22 @@ module GeoServerMain language "TTCN-3:2005" {
 			countryName := "Australia",
 			status := "status",
 			popClass := "popClass"
-		}		
+		}
 		log("Execute 'Create City' with correct data");
 		execute(insertCity(valueof(cityWithCorrectData)));
 		log("Execute 'Create City' with correct data");
-		execute(insertCity(valueof(cityWithErroneousData)));
+		execute(insertCity2(valueof(cityWithErroneousData)));
 		log("Execute 'Retrieve City' with correct data");
 		execute(retrieveCity(valueof(cityWithCorrectData)));
 		log("Execute 'Create City' with erroneous data");
-		execute(retrieveCity(valueof(cityWithErroneousData)));
+		execute(retrieveCity2(valueof(cityWithCorrectData)));
 		log("Execute 'Update City' with correct data");
 		execute(updateCity(valueof(cityWithCorrectData), valueof(updatedCityWithCorrectData)));
 		log("Execute 'Update City' with erroneous data");
-		execute(updateCity(valueof(cityWithCorrectData), valueof(cityWithErroneousData)));
+		execute(updateCity2(valueof(cityWithCorrectData), valueof(cityWithErroneousData)));
 		log("Execute 'Delete City' with correct data");
 		execute(deleteCity(valueof(cityWithCorrectData)));
 		log("Execute 'Delete City' with erroneous data");
-		execute(deleteCity(valueof(cityWithErroneousData)));		
+		execute(deleteCity2(valueof(cityWithCorrectData)));		
 	}	
 }
