@@ -382,9 +382,8 @@ module GeoServerMain language "TTCN-3:2005" {
 	/*
 		Test the update functionality of a city
 	    1. Insert a city directly at the GEOServer
-	    2. Update some of it's details
-	 	3. Retrieve the updated city
-	 	4. Delete the city to restore the server in the previous state
+	    2. Update some of it's details with erroneous data
+	 	3. Attempt to retrieve the city using erroneous data
 	 */
 	testcase updateCity2(CityType initialCity, CityType updatedCity) runs on SUTInterfaceComponent system TSIcomponent {
 		log("Mapping ports...");
@@ -452,11 +451,9 @@ module GeoServerMain language "TTCN-3:2005" {
 		map(mtc:sutPort, system:tsiPort);
 	}	
 	/*
-		Test deleting a city.
-		1, Insert a new city directly at GEOServer
-		2. Delete it using GISClient
-		3. Attempt to retrieve it from GEOServer
-		     If it still exists then the test fails, otherwise it's successful.		
+		Attempt to delete a city that does not exist
+		1. Attempt to retrieve the city from GEOServer
+		2. If it does not exist attempt to delete it from GISClient
 	 */
 	testcase deleteCity2(CityType aCity) runs on SUTInterfaceComponent system TSIcomponent {
 		log("Mapping ports...");
@@ -517,10 +514,9 @@ module GeoServerMain language "TTCN-3:2005" {
 		}
 		unmap(mtc:sutPort, system:tsiPort);	
 	}
-	/* Test if the interface displays an city correctly 
-	   1. Insert a city directly at the GEOServer
-	   2. Retrieve the city from the GISClient interface
-	   3. If successful delete the city to restore the server to the initial state	   
+	/* Test if a non-existing city can be retrieved from the GISClient interface 
+	   1. Attempt to retrieve the city from GEOServer.
+	   2. If the city does not exist attempt to retrieve it from GISClient   
 	*/
 	testcase retrieveCity2(CityType aCity) runs on SUTInterfaceComponent system TSIcomponent {
 		map(mtc:sutPort, system:tsiPort);
